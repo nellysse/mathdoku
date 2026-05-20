@@ -37,29 +37,34 @@ public class LatexGeneratorService {
     private String generateMediumLatex(int n) {
         int variant = random.nextInt(4);
         int a = n > 5 ? 2 : (random.nextInt(3) + 2); // 2..4
-        return switch(variant) {
-            case 0 -> "\\log_{" + a + "} " + (long)Math.pow(a, n);
+
+        return switch (variant) {
+            case 0 -> "\\log_{" + a + "} " + (long) Math.pow(a, n);
+
             case 1 -> {
                 if (n == 1) yield "\\lg 10";
                 if (n == 2) yield "\\lg 100";
                 if (n == 3) yield "\\lg 1000";
                 if (n == 4) yield "\\lg 10000";
-                yield "\\log_{" + a + "} " + (long)Math.pow(a, n);
+                yield "\\log_{" + a + "} " + (long) Math.pow(a, n);
             }
+
             case 2 -> {
                 int b = random.nextInt(2) + 1; // 1..2
-                long val = (long)Math.pow(a, n + b);
+                long val = (long) Math.pow(a, n + b);
                 yield "\\log_{" + a + "}(" + val + ") - " + b;
             }
+
             case 3 -> {
                 int[] divisors = getDivisors(n);
                 int b = divisors[random.nextInt(divisors.length)];
                 if (b == 1) {
-                    yield "\\log_{" + a + "} " + (long)Math.pow(a, n);
+                    yield "\\log_{" + a + "} " + (long) Math.pow(a, n);
                 } else {
-                    yield b + " \\cdot \\log_{" + a + "} " + (long)Math.pow(a, n/b);
+                    yield b + " \\cdot \\log_{" + a + "} " + (long) Math.pow(a, n / b);
                 }
             }
+
             default -> String.valueOf(n);
         };
     }
@@ -67,8 +72,10 @@ public class LatexGeneratorService {
     private String generateHardLatex(int n) {
         int variant = random.nextInt(4);
         int a = random.nextInt(4) + 2; // 2..5
+
         return switch (variant) {
             case 0 -> "\\int_{0}^{" + n + "} 1 \\, dx";
+
             case 1 -> {
                 if (n % 2 == 0) {
                     yield "(x^2)'|_{x=" + (n / 2) + "}";
@@ -76,9 +83,9 @@ public class LatexGeneratorService {
                     yield "(x^2)'|_{x=\\frac{" + n + "}{2}}";
                 }
             }
-            case 2 -> {
-                yield "\\int_{0}^{1} " + (n * a) + "x^" + (a - 1) + " \\, dx";
-            }
+
+            case 2 -> "\\int_{0}^{1} " + (n * a) + "x^{" + (a - 1) + "} \\, dx";
+
             case 3 -> {
                 int k = random.nextInt(4) + 1; // 1..4
                 if (n % k == 0) {
@@ -89,20 +96,23 @@ public class LatexGeneratorService {
                     yield "\\int_{0}^{" + k + "} \\frac{" + n + "}{" + k + "} \\, dx";
                 }
             }
+
             default -> String.valueOf(n);
         };
     }
 
     private int[] getDivisors(int n) {
-        if (n == 1) return new int[]{1};
-        if (n == 2) return new int[]{1, 2};
-        if (n == 3) return new int[]{1, 3};
-        if (n == 4) return new int[]{1, 2, 4};
-        if (n == 5) return new int[]{1, 5};
-        if (n == 6) return new int[]{1, 2, 3, 6};
-        if (n == 7) return new int[]{1, 7};
-        if (n == 8) return new int[]{1, 2, 4, 8};
-        if (n == 9) return new int[]{1, 3, 9};
-        return new int[]{1};
+        return switch (n) {
+            case 1 -> new int[]{1};
+            case 2 -> new int[]{1, 2};
+            case 3 -> new int[]{1, 3};
+            case 4 -> new int[]{1, 2, 4};
+            case 5 -> new int[]{1, 5};
+            case 6 -> new int[]{1, 2, 3, 6};
+            case 7 -> new int[]{1, 7};
+            case 8 -> new int[]{1, 2, 4, 8};
+            case 9 -> new int[]{1, 3, 9};
+            default -> new int[]{1};
+        };
     }
 }

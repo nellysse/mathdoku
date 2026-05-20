@@ -1,9 +1,9 @@
 package com.example.demo.controller;
 
-import  com.example.demo.model.dto.CheckRequestDTO;
-import  com.example.demo.model.dto.CheckResponseDTO;
-import  com.example.demo.model.dto.GameResponseDTO;
-import  com.example.demo.service.GameService;
+import com.example.demo.model.dto.CheckRequestDTO;
+import com.example.demo.model.dto.CheckResponseDTO;
+import com.example.demo.model.dto.GameResponseDTO;
+import com.example.demo.service.GameService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -51,19 +51,15 @@ public class GameController {
             }
         }
 
-        CheckResponseDTO response = gameService.checkAnswer(request.sessionId(), request.userGrid());
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{sessionId}/solve")
-    public ResponseEntity<int[][]> getSolution(@PathVariable String sessionId) {
         try {
-            int[][] solution = gameService.getSolution(sessionId);
-            return ResponseEntity.ok(solution);
+            CheckResponseDTO response = gameService.checkAnswer(request.sessionId(), request.userGrid());
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            log.warn("Session not found: {}", request.sessionId());
             return ResponseEntity.notFound().build();
         }
     }
+
 
     @GetMapping("/{sessionId}/hint")
     public ResponseEntity<Integer> getHint(

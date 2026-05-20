@@ -1,7 +1,7 @@
 package com.example.demo.model.entity;
 
 import jakarta.persistence.*;
-        import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "game_sessions")

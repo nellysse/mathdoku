@@ -14,7 +14,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
 import java.util.Random;
 
 @Service
@@ -47,7 +46,6 @@ public class GameService {
         this.objectMapper = objectMapper;
     }
 
-
     public GameResponseDTO createNewGame(String difficulty) {
         int[][] solution = fetchSolutionFromApi();
         String[][] mask = generateMask(solution, difficulty);
@@ -57,7 +55,6 @@ public class GameService {
         GameSession saved = sessionRepository.save(session);
 
         log.info("New game created: sessionId={}, difficulty={}", saved.getId(), difficulty);
-
         return new GameResponseDTO(saved.getId(), difficulty, mask);
     }
 
@@ -66,38 +63,42 @@ public class GameService {
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
         int[][] solution = deserializeSolution(session.getSolutionJson());
-        
+
         boolean correct = true;
+        outer:
         for (int row = 0; row < 9; row++) {
             for (int col = 0; col < 9; col++) {
                 String cell = userGrid[row][col];
-                if (cell == null || cell.equals("0") || cell.isBlank()) {
+
+                if (cell == null || cell.isBlank() || cell.equals("0")) {
                     correct = false;
-                    break;
+                    break outer;
                 }
+
+                int val;
                 try {
-                    int val = Integer.parseInt(cell);
-                    if (val != solution[row][col]) {
-                        correct = false;
-                        break;
-                    }
+                    val = Integer.parseInt(cell.trim());
                 } catch (NumberFormatException e) {
-                    // Это ячейка с LaTeX формулой (которая пришла с фронтенда "как есть")
-                    // Пропускаем ее валидацию
-                    continue;
+                    log.warn("Non-numeric value at [{},{}]: '{}'", row, col, cell);
+                    correct = false;
+                    break outer;
+                }
+
+                if (val != solution[row][col]) {
+                    correct = false;
+                    break outer;
                 }
             }
-            if (!correct) break;
         }
 
         if (correct) {
             session.setCompleted(true);
             sessionRepository.save(session);
             log.info("Session {} completed successfully.", sessionId);
-            return new CheckResponseDTO(true, "Правильно! Вы решили головоломку.", null);
+            return new CheckResponseDTO(true, "Correct! You did it.", null);
         } else {
             log.info("Session {} — wrong answer submitted.", sessionId);
-            return new CheckResponseDTO(false, "Есть ошибки. Попробуйте ещё раз.", solution);
+            return new CheckResponseDTO(false, "Errors. Try again.", solution);
         }
     }
 
@@ -139,13 +140,17 @@ public class GameService {
 
         } catch (Exception e) {
             log.warn("Dosuku API unavailable ({}). Using fallback solution.", e.getMessage());
-            return FALLBACK_SOLUTION;
+            int[][] copy = new int[9][9];
+            for (int i = 0; i < 9; i++) {
+                copy[i] = FALLBACK_SOLUTION[i].clone();
+            }
+            return copy;
         }
     }
 
     private String[][] generateMask(int[][] solution, String difficulty) {
-        double emptyThreshold  = getEmptyThreshold(difficulty);
-        double digitThreshold  = emptyThreshold + getDigitThreshold(difficulty);
+        double emptyThreshold = getEmptyThreshold(difficulty);
+        double digitThreshold = emptyThreshold + getDigitThreshold(difficulty);
 
         String[][] mask = new String[9][9];
 
@@ -168,17 +173,19 @@ public class GameService {
 
     private double getEmptyThreshold(String difficulty) {
         return switch (difficulty.toLowerCase()) {
-            case "medium" -> 0.60;
-            case "hard"   -> 0.55;
-            default       -> 0.55; // easy
+            case "easy"   -> 0.40;
+            case "medium" -> 0.55;
+            case "hard"   -> 0.65;
+            default       -> 0.40;
         };
     }
 
     private double getDigitThreshold(String difficulty) {
         return switch (difficulty.toLowerCase()) {
+            case "easy"   -> 0.45;
             case "medium" -> 0.20;
-            case "hard"   -> 0.20;
-            default       -> 0.20; // easy
+            case "hard"   -> 0.10;
+            default       -> 0.45;
         };
     }
 
