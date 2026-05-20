@@ -55,9 +55,10 @@ public class GameService {
         GameSession saved = sessionRepository.save(session);
 
         log.info("New game created: sessionId={}, difficulty={}", saved.getId(), difficulty);
-        return new GameResponseDTO(saved.getId(), difficulty, mask);
-    }
 
+        // ВОТ ЗДЕСЬ нужно добавить null в качестве четвертого аргумента:
+        return new GameResponseDTO(saved.getId(), difficulty, mask, null);
+    }
     public CheckResponseDTO checkAnswer(String sessionId, String[][] userGrid) {
         GameSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
