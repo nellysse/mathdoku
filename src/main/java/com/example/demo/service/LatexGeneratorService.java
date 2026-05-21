@@ -11,7 +11,7 @@ public class LatexGeneratorService {
     public String toLatex(int value, String difficulty) {
         String result;
         int attempts = 0;
-        // Strict limits: Medium strings max 14 chars, Hard max 22 chars
+        // Жесткие лимиты: Medium макс 14 символов, Hard макс 22
         int maxLength = difficulty.equalsIgnoreCase("hard") ? 22 : 14;
         
         do {
@@ -23,7 +23,7 @@ public class LatexGeneratorService {
             attempts++;
         } while (result.length() > maxLength && attempts < 10);
         
-        // Final fallback if the formula is physically too long for the UI
+        // Запасной план: если формула физически слишком длинная, возвращаем цифру
         if (result.length() > maxLength) {
             return String.valueOf(value);
         }
