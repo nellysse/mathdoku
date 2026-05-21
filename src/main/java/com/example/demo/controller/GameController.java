@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/game")
-@CrossOrigin(origins = "*")
 public class GameController {
 
     private static final Logger log = LoggerFactory.getLogger(GameController.class);
@@ -40,8 +39,11 @@ public class GameController {
     public ResponseEntity<CheckResponseDTO> checkAnswer(@RequestBody CheckRequestDTO request) {
         log.info("Request: POST /api/game/check, sessionId={}", request.sessionId());
 
-        if (request.sessionId() == null || request.userGrid() == null
-                || request.userGrid().length != 9) {
+        if (request.sessionId() == null || request.sessionId().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (request.userGrid() == null || request.userGrid().length != 9) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -66,6 +68,12 @@ public class GameController {
             @PathVariable String sessionId,
             @RequestParam int row,
             @RequestParam int col) {
+
+        // Валидация диапазона координат
+        if (row < 0 || row >= 9 || col < 0 || col >= 9) {
+            return ResponseEntity.badRequest().build();
+        }
+
         try {
             Integer hint = gameService.getHint(sessionId, row, col);
             if (hint == null) return ResponseEntity.badRequest().build();
@@ -81,6 +89,15 @@ public class GameController {
             @RequestParam int row,
             @RequestParam int col,
             @RequestParam int value) {
+
+        // Валидация диапазона координат и значения
+        if (row < 0 || row >= 9 || col < 0 || col >= 9) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (value < 1 || value > 9) {
+            return ResponseEntity.badRequest().build();
+        }
+
         try {
             Integer correctValue = gameService.getHint(sessionId, row, col);
             if (correctValue == null) return ResponseEntity.badRequest().build();

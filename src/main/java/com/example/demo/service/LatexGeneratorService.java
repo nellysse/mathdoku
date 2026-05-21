@@ -9,11 +9,25 @@ public class LatexGeneratorService {
     private final Random random = new Random();
 
     public String toLatex(int value, String difficulty) {
-        return switch (difficulty.toLowerCase()) {
-            case "medium" -> generateMediumLatex(value);
-            case "hard"   -> generateHardLatex(value);
-            default       -> generateEasyLatex(value);
-        };
+        String result;
+        int attempts = 0;
+        // Hard examples have more formatting characters (\int, \frac), so we allow a bit more raw string length
+        int maxLength = difficulty.equalsIgnoreCase("hard") ? 24 : 16;
+        
+        do {
+            result = switch (difficulty.toLowerCase()) {
+                case "medium" -> generateMediumLatex(value);
+                case "hard"   -> generateHardLatex(value);
+                default       -> generateEasyLatex(value);
+            };
+            attempts++;
+        } while (result.length() > maxLength && attempts < 10);
+        
+        // If we couldn't generate a short enough expression, fallback to plain number
+        if (result.length() > maxLength) {
+            return String.valueOf(value);
+        }
+        return result;
     }
 
     private String generateEasyLatex(int n) {
@@ -36,32 +50,31 @@ public class LatexGeneratorService {
 
     private String generateMediumLatex(int n) {
         int variant = random.nextInt(4);
-        int a = n > 5 ? 2 : (random.nextInt(3) + 2); // 2..4
+        int a = n > 4 ? 2 : (random.nextInt(2) + 2); // 2..3
 
         return switch (variant) {
-            case 0 -> "\\log_{" + a + "} " + (long) Math.pow(a, n);
+            case 0 -> "\\log_{" + a + "}" + safePow(a, n);
 
             case 1 -> {
                 if (n == 1) yield "\\lg 10";
                 if (n == 2) yield "\\lg 100";
                 if (n == 3) yield "\\lg 1000";
-                if (n == 4) yield "\\lg 10000";
-                yield "\\log_{" + a + "} " + (long) Math.pow(a, n);
+                yield "\\log_{" + a + "}" + safePow(a, n);
             }
 
             case 2 -> {
                 int b = random.nextInt(2) + 1; // 1..2
-                long val = (long) Math.pow(a, n + b);
-                yield "\\log_{" + a + "}(" + val + ") - " + b;
+                long val = safePow(a, n + b);
+                yield "\\log_{" + a + "}(" + val + ")-" + b;
             }
 
             case 3 -> {
                 int[] divisors = getDivisors(n);
                 int b = divisors[random.nextInt(divisors.length)];
                 if (b == 1) {
-                    yield "\\log_{" + a + "} " + (long) Math.pow(a, n);
+                    yield "\\log_{" + a + "}" + safePow(a, n);
                 } else {
-                    yield b + " \\cdot \\log_{" + a + "} " + (long) Math.pow(a, n / b);
+                    yield b + "\\log_{" + a + "}" + safePow(a, n / b);
                 }
             }
 
@@ -71,34 +84,43 @@ public class LatexGeneratorService {
 
     private String generateHardLatex(int n) {
         int variant = random.nextInt(4);
-        int a = random.nextInt(4) + 2; // 2..5
+        int a = random.nextInt(3) + 2; // 2..4
 
         return switch (variant) {
-            case 0 -> "\\int_{0}^{" + n + "} 1 \\, dx";
+            case 0 -> "\\int_{0}^{" + n + "} dx";
 
             case 1 -> {
                 if (n % 2 == 0) {
-                    yield "(x^2)'|_{x=" + (n / 2) + "}";
+                    yield "(x^2)'|_{" + (n / 2) + "}";
                 } else {
-                    yield "(x^2)'|_{x=\\frac{" + n + "}{2}}";
+                    yield "(x^2)'|_{\\frac{" + n + "}{2}}";
                 }
             }
 
-            case 2 -> "\\int_{0}^{1} " + (n * a) + "x^{" + (a - 1) + "} \\, dx";
+            case 2 -> "\\int_{0}^{1} " + (n * a) + "x^{" + (a - 1) + "}dx";
 
             case 3 -> {
-                int k = random.nextInt(4) + 1; // 1..4
+                int k = random.nextInt(3) + 1; // 1..3
                 if (n % k == 0) {
                     int c = n / k;
-                    if (c == 1) yield "\\int_{0}^{" + k + "} 1 \\, dx";
-                    yield "\\int_{0}^{" + k + "} " + c + " \\, dx";
+                    if (c == 1) yield "\\int_{0}^{" + k + "} dx";
+                    yield "\\int_{0}^{" + k + "} " + c + "dx";
                 } else {
-                    yield "\\int_{0}^{" + k + "} \\frac{" + n + "}{" + k + "} \\, dx";
+                    yield "\\int_{0}^{" + k + "} \\frac{" + n + "}{" + k + "}dx";
                 }
             }
 
             default -> String.valueOf(n);
         };
+    }
+
+    /**
+     * Безопасное возведение в степень с корректным преобразованием в long.
+     * Math.pow возвращает double, при кастинге (long) может терять точность.
+     * Math.round обеспечивает корректное округление.
+     */
+    private long safePow(int base, int exponent) {
+        return Math.round(Math.pow(base, exponent));
     }
 
     private int[] getDivisors(int n) {

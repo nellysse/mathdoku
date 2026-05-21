@@ -14,6 +14,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Random;
 
 @Service
@@ -25,6 +26,11 @@ public class GameService {
     private final LatexGeneratorService latexGenerator;
     private final ObjectMapper objectMapper;
     private final Random random = new Random();
+
+    /** Один HttpClient на весь сервис — переиспользует thread pool и соединения */
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     private static final int[][] FALLBACK_SOLUTION = {
             {5, 3, 4, 6, 7, 8, 9, 1, 2},
@@ -56,9 +62,9 @@ public class GameService {
 
         log.info("New game created: sessionId={}, difficulty={}", saved.getId(), difficulty);
 
-        // ВОТ ЗДЕСЬ нужно добавить null в качестве четвертого аргумента:
-        return new GameResponseDTO(saved.getId(), difficulty, mask, null);
+        return new GameResponseDTO(saved.getId(), difficulty, mask);
     }
+
     public CheckResponseDTO checkAnswer(String sessionId, String[][] userGrid) {
         GameSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
@@ -99,7 +105,8 @@ public class GameService {
             return new CheckResponseDTO(true, "Correct! You did it.", null);
         } else {
             log.info("Session {} — wrong answer submitted.", sessionId);
-            return new CheckResponseDTO(false, "Errors. Try again.", solution);
+            // НЕ отправляем решение клиенту — это уязвимость
+            return new CheckResponseDTO(false, "Errors. Try again.", null);
         }
     }
 
@@ -117,14 +124,18 @@ public class GameService {
 
     private int[][] fetchSolutionFromApi() {
         try {
-            HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://sudoku-api.vercel.app/api/dosuku"))
+                    .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build();
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             log.debug("Dosuku API response status: {}", response.statusCode());
+
+            if (response.statusCode() != 200) {
+                throw new RuntimeException("Dosuku API returned status " + response.statusCode());
+            }
 
             JsonNode root = objectMapper.readTree(response.body());
             JsonNode solutionNode = root.path("newboard").path("grids").get(0).path("solution");
