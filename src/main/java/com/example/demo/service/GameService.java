@@ -71,6 +71,11 @@ public class GameService {
 
         int[][] solution = deserializeSolution(session.getSolutionJson());
 
+        if (session.isCompleted()) {
+            log.warn("Attempt to check an already completed session: {}", sessionId);
+            return new CheckResponseDTO(true, "Already completed.", null);
+        }
+
         boolean correct = true;
         outer:
         for (int row = 0; row < 9; row++) {
